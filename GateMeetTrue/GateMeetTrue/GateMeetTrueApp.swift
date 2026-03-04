@@ -8,11 +8,10 @@
 import SwiftUI
 
 @main
-
 struct GateMeetTrueApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            WelcomeView()
         }
     }
 }

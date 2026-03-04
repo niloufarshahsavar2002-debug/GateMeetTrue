@@ -1,6 +1,107 @@
 import SwiftUI
 
-// Shared controls
+// MARK: - ONBOARDING BACKGROUND
+
+struct OnboardingBackground<BottomContent: View, CenterContent: View, TopContent: View>: View {
+    var bottomContent: () -> BottomContent
+    var centerContent: () -> CenterContent
+    var topContent: () -> TopContent
+
+    let bgColor = Color(red: 168/255, green: 200/255, blue: 220/255)
+
+    init(
+        @ViewBuilder bottomContent: @escaping () -> BottomContent,
+        @ViewBuilder centerContent: @escaping () -> CenterContent,
+        @ViewBuilder topContent: @escaping () -> TopContent
+    ) {
+        self.bottomContent = bottomContent
+        self.centerContent = centerContent
+        self.topContent = topContent
+    }
+
+    init(
+        @ViewBuilder bottomContent: @escaping () -> BottomContent,
+        @ViewBuilder topContent: @escaping () -> TopContent
+    ) where CenterContent == EmptyView {
+        self.bottomContent = bottomContent
+        self.centerContent = { EmptyView() }
+        self.topContent = topContent
+    }
+
+    init(
+        @ViewBuilder bottomContent: @escaping () -> BottomContent,
+        @ViewBuilder centerContent: @escaping () -> CenterContent
+    ) where TopContent == EmptyView {
+        self.bottomContent = bottomContent
+        self.centerContent = centerContent
+        self.topContent = { EmptyView() }
+    }
+
+    init(
+        @ViewBuilder bottomContent: @escaping () -> BottomContent
+    ) where CenterContent == EmptyView, TopContent == EmptyView {
+        self.bottomContent = bottomContent
+        self.centerContent = { EmptyView() }
+        self.topContent = { EmptyView() }
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .topLeading) {
+                bgColor.ignoresSafeArea()
+
+                // Clouds - BACK AND MOVING!
+                ZStack {
+                    AnimatedCloud(y: 110, width: 180, scale: 1.0, speed: 28, opacity: 0.95)
+                    AnimatedCloud(y: geometry.size.height * 0.22, width: 150, scale: 1.0, speed: 34, opacity: 0.9, direction: .rightToLeft)
+                    AnimatedCloud(y: 70, width: 140, scale: 1.0, speed: 30, opacity: 0.92)
+                    AnimatedCloud(y: geometry.size.height * 0.36, width: 200, scale: 1.0, speed: 36, opacity: 0.88, direction: .rightToLeft)
+                }
+                .allowsHitTesting(false)
+
+                // Airplane
+                MinimalAirplane(
+                    startY: geometry.size.height * 0.14,
+                    endY: geometry.size.height * 0.28,
+                    arcHeight: geometry.size.height * 0.10,
+                    speed: 14,
+                    size: 64
+                )
+                .allowsHitTesting(false)
+
+                // CENTER CONTENT
+                centerContent()
+
+                // Bottom white circle
+                Circle()
+                    .fill(Color.white)
+                    .frame(
+                        width: geometry.size.width * 2.0,
+                        height: geometry.size.width * 2.0
+                    )
+                    .position(
+                        x: geometry.size.width * 0.5,
+                        y: geometry.size.height * 0.90
+                    )
+
+                // FORMS LOWERED - Moved from 0.65 to 0.70 to put gender page a bit lower
+                VStack {
+                    bottomContent()
+                        .padding(.horizontal, 28)
+                }
+                .position(x: geometry.size.width / 2, y: geometry.size.height * 0.70)
+
+                // Top content pinned to top-leading safe area
+                topContent()
+                    .padding(.top, max(geometry.safeAreaInsets.top, 12))
+                    .padding(.leading, 16)
+            }
+        }
+    }
+}
+
+// MARK: - Shared controls
+
 struct BackButton: View {
     var action: () -> Void
     var body: some View {
@@ -47,7 +148,7 @@ private struct FormSection<Content: View>: View {
         VStack(alignment: .leading, spacing: FormStyle.sectionSpacing) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.gray) // Keeps the title gray to match "What's your name?"
+                .foregroundColor(.black)
                 .padding(.bottom, FormStyle.titleSpacing)
 
             content
@@ -62,7 +163,7 @@ private struct FormTextFieldRow: View {
     var body: some View {
         TextField(placeholder, text: $text)
             .padding()
-            .foregroundColor(.black) // User input text is now BLACK
+            .foregroundColor(.black)
             .background(Color(UIColor.systemGray6))
             .cornerRadius(FormStyle.cornerRadius)
             .overlay(
@@ -81,11 +182,9 @@ private struct FormOptionRow: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    // White text if selected, BLACK if not
                     .foregroundColor(isSelected ? .white : .black)
                 Spacer()
                 
-                // Add a checkmark if selected!
                 if isSelected {
                     Image(systemName: "checkmark")
                         .foregroundColor(.white)
@@ -94,7 +193,6 @@ private struct FormOptionRow: View {
             }
             .padding()
             .frame(maxWidth: .infinity)
-            // Dark gray if selected, standard systemGray6 if not
             .background(isSelected ? Color.gray : Color(UIColor.systemGray6))
             .cornerRadius(FormStyle.cornerRadius)
             .overlay(
@@ -111,17 +209,17 @@ struct BaseInputScreen: View {
     let question: String
     let placeholder: String
     @Binding var inputText: String
-    var keyboardType: UIKeyboardType = .default // Allows custom keyboards (like NumberPad)
+    var keyboardType: UIKeyboardType = .default
     var onContinue: () -> Void
     var onBack: () -> Void
 
     var body: some View {
-        BackgroundDesign(
+        OnboardingBackground(
             bottomContent: {
                 VStack(alignment: .leading, spacing: 20) {
                     FormSection(title: question) {
                         FormTextFieldRow(placeholder: placeholder, text: $inputText)
-                            .keyboardType(keyboardType) // Applies the specific keyboard
+                            .keyboardType(keyboardType)
                     }
                     HStack { Spacer(); ContinueButton(action: onContinue) }
                 }
@@ -144,11 +242,10 @@ struct AgeInputView: View {
             question: "How old are you?",
             placeholder: "Age",
             inputText: $age,
-            keyboardType: .numberPad, // Pops up the number keyboard!
+            keyboardType: .numberPad,
             onContinue: onContinue,
             onBack: onBack
         )
-        // Strictly filters input to numbers only, max 3 digits
         .onChange(of: age, perform: { newValue in
             let filtered = newValue.filter { $0.isNumber }
             if age != String(filtered.prefix(3)) {
@@ -167,7 +264,7 @@ struct GenderInputView: View {
     private let options = ["Male", "Female", "Non-binary", "Prefer not to say"]
 
     var body: some View {
-        BackgroundDesign(
+        OnboardingBackground(
             bottomContent: {
                 VStack(alignment: .leading, spacing: 20) {
                     FormSection(title: "What is your gender?") {
@@ -212,23 +309,6 @@ struct LanguagesInputView: View {
     }
 }
 
-// Interests
-struct InterestsInputView: View {
-    @Binding var interests: String
-    var onContinue: () -> Void
-    var onBack: () -> Void
-
-    var body: some View {
-        BaseInputScreen(
-            question: "What are your interests?",
-            placeholder: "e.g. Travel, Music, Art",
-            inputText: $interests,
-            onContinue: onContinue,
-            onBack: onBack
-        )
-    }
-}
-
 // Profile Image
 struct ProfileImageInputView: View {
     @Binding var imageData: Data?
@@ -236,46 +316,42 @@ struct ProfileImageInputView: View {
     var onBack: () -> Void
 
     var body: some View {
-        BackgroundDesign(
+        OnboardingBackground(
             bottomContent: {
                 VStack(alignment: .leading, spacing: 20) {
-                    FormSection(title: "Add a profile photo") {
-                        VStack(spacing: 16) {
-                            HStack { Spacer() }
-                            // Avatar preview
-                            if let data = imageData, let uiImage = UIImage(data: data) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 140, height: 140)
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                                    .shadow(radius: 5)
-                            } else {
-                                Circle()
-                                    .fill(Color.white.opacity(0.8))
-                                    .frame(width: 140, height: 140)
-                                    .overlay(
-                                        Image(systemName: "person.fill")
-                                            .font(.system(size: 60))
-                                            .foregroundColor(.gray)
-                                    )
-                            }
-
-                            Button("Select Photo") {
-                                // Hook up a picker later; for now just clears
-                                imageData = nil
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .foregroundColor(.black) // Button text is now BLACK
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(FormStyle.cornerRadius)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: FormStyle.cornerRadius)
-                                    .stroke(Color.gray, lineWidth: 1.5)
-                            )
+                    VStack(spacing: 16) {
+                        HStack { Spacer() }
+                        if let data = imageData, let uiImage = UIImage(data: data) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 140, height: 140)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white, lineWidth: 4))
+                                .shadow(radius: 5)
+                        } else {
+                            Circle()
+                                .fill(Color.white.opacity(0.8))
+                                .frame(width: 140, height: 140)
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.gray)
+                                )
                         }
+
+                        Button("Select Photo") {
+                            imageData = nil
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(.black)
+                        .background(Color(UIColor.systemGray6))
+                        .cornerRadius(FormStyle.cornerRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: FormStyle.cornerRadius)
+                                .stroke(Color.black, lineWidth: 1.5)
+                        )
                     }
                     HStack { Spacer(); ContinueButton(action: onContinue) }
                 }
@@ -318,7 +394,6 @@ struct FlightInputView: View {
             onContinue: onContinue,
             onBack: onBack
         )
-        // Forces uppercase, removes spaces/symbols, and limits to exactly 5 characters
         .onChange(of: flight, perform: { newValue in
             let filtered = newValue.uppercased().filter { $0.isLetter || $0.isNumber }
             if flight != String(filtered.prefix(5)) {
@@ -352,7 +427,7 @@ struct TimeInputView: View {
     var onBack: () -> Void
 
     var body: some View {
-        BackgroundDesign(
+        OnboardingBackground(
             bottomContent: {
                 VStack(alignment: .leading, spacing: 20) {
                     FormSection(title: "When do you depart?") {
@@ -365,7 +440,7 @@ struct TimeInputView: View {
                             .cornerRadius(FormStyle.cornerRadius)
                             .overlay(
                                 RoundedRectangle(cornerRadius: FormStyle.cornerRadius)
-                                    .stroke(Color.gray, lineWidth: 1.5)
+                                    .stroke(Color.black, lineWidth: 1.5)
                             )
                     }
                     HStack { Spacer(); ContinueButton(action: onContinue) }

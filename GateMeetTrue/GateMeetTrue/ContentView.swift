@@ -1,7 +1,8 @@
 import SwiftUI
 
 enum AppStep {
-    case login, inputAge, inputGender, inputLanguages, inputInterests, inputImage, inputAirport, inputFlight, inputDestination, inputTime, mainApp
+    // Removed .inputInterests from this list
+    case login, inputAge, inputGender, inputLanguages, inputImage, inputAirport, inputFlight, inputDestination, inputTime, mainApp
 }
 
 struct ContentView: View {
@@ -12,7 +13,7 @@ struct ContentView: View {
     @State private var draftAge = ""
     @State private var draftGender = ""
     @State private var draftLanguages = ""
-    @State private var draftInterests = ""
+    // Removed draftInterests variable
     @State private var draftImageData: Data? = nil
     @State private var draftAirport = ""
     @State private var draftFlight = ""
@@ -72,23 +73,12 @@ struct ContentView: View {
                 languages: $draftLanguages,
                 onContinue: {
                     isForward = true
-                    withAnimation { currentStep = .inputInterests }
-                },
-                onBack: {
-                    isForward = false
-                    withAnimation { currentStep = .inputGender }
-                }
-            )
-        case .inputInterests:
-            InterestsInputView(
-                interests: $draftInterests,
-                onContinue: {
-                    isForward = true
+                    // Skips Interests and goes straight to Image
                     withAnimation { currentStep = .inputImage }
                 },
                 onBack: {
                     isForward = false
-                    withAnimation { currentStep = .inputLanguages }
+                    withAnimation { currentStep = .inputGender }
                 }
             )
         case .inputImage:
@@ -100,7 +90,8 @@ struct ContentView: View {
                 },
                 onBack: {
                     isForward = false
-                    withAnimation { currentStep = .inputInterests }
+                    // Goes back to Languages instead of Interests
+                    withAnimation { currentStep = .inputLanguages }
                 }
             )
         case .inputAirport:
@@ -159,7 +150,7 @@ struct ContentView: View {
                 userAge: draftAge,
                 userGender: draftGender,
                 userLanguages: draftLanguages,
-                userInterests: draftInterests,
+                userInterests: "", // Passed as an empty string to prevent build errors!
                 userImage: draftImageData,
                 userAirport: draftAirport,
                 userDepartureTime: draftDepartureTime

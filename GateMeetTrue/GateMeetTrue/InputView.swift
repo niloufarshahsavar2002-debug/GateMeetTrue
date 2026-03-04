@@ -3,108 +3,6 @@ import SwiftUI
 // MARK: - CONSTANTS
 let bgColor = Color(red: 168/255, green: 200/255, blue: 220/255)
 
-// MARK: - BACKGROUND DESIGN (TOP + CENTER + BOTTOM SUPPORT)
-struct BackgroundDesign<BottomContent: View, CenterContent: View, TopContent: View>: View {
-    var bottomContent: () -> BottomContent
-    var centerContent: () -> CenterContent
-    var topContent: () -> TopContent
-
-    // Designated initializer with all three content areas
-    init(
-        @ViewBuilder bottomContent: @escaping () -> BottomContent,
-        @ViewBuilder centerContent: @escaping () -> CenterContent,
-        @ViewBuilder topContent: @escaping () -> TopContent
-    ) {
-        self.bottomContent = bottomContent
-        self.centerContent = centerContent
-        self.topContent = topContent
-    }
-
-    // Convenience initializer when no center content is provided
-    init(
-        @ViewBuilder bottomContent: @escaping () -> BottomContent,
-        @ViewBuilder topContent: @escaping () -> TopContent
-    ) where CenterContent == EmptyView {
-        self.bottomContent = bottomContent
-        self.centerContent = { EmptyView() }
-        self.topContent = topContent
-    }
-
-    // Convenience initializer when no top content is provided
-    init(
-        @ViewBuilder bottomContent: @escaping () -> BottomContent,
-        @ViewBuilder centerContent: @escaping () -> CenterContent
-    ) where TopContent == EmptyView {
-        self.bottomContent = bottomContent
-        self.centerContent = centerContent
-        self.topContent = { EmptyView() }
-    }
-
-    // Convenience initializer when only bottom content is provided
-    init(
-        @ViewBuilder bottomContent: @escaping () -> BottomContent
-    ) where CenterContent == EmptyView, TopContent == EmptyView {
-        self.bottomContent = bottomContent
-        self.centerContent = { EmptyView() }
-        self.topContent = { EmptyView() }
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .topLeading) {
-                bgColor.ignoresSafeArea()
-
-                // Clouds
-                ZStack {
-                    AnimatedCloud(y: 110, width: 180, scale: 1.0, speed: 28, opacity: 0.95)
-                    AnimatedCloud(y: geometry.size.height * 0.22, width: 150, scale: 1.0, speed: 34, opacity: 0.9, direction: .rightToLeft)
-                    AnimatedCloud(y: 70, width: 140, scale: 1.0, speed: 30, opacity: 0.92)
-                    AnimatedCloud(y: geometry.size.height * 0.36, width: 200, scale: 1.0, speed: 36, opacity: 0.88, direction: .rightToLeft)
-                }
-                .allowsHitTesting(false)
-
-                // Airplane
-                MinimalAirplane(
-                    startY: geometry.size.height * 0.14,
-                    endY: geometry.size.height * 0.28,
-                    arcHeight: geometry.size.height * 0.10,
-                    speed: 14,
-                    size: 64
-                )
-                .allowsHitTesting(false)
-
-                // CENTER CONTENT (LOGO)
-                centerContent()
-
-                // Bottom white circle
-                Circle()
-                    .fill(Color.white)
-                    .frame(
-                        width: geometry.size.width * 1.6,
-                        height: geometry.size.width * 1.6
-                    )
-                    .position(
-                        x: geometry.size.width * 0.5,
-                        y: geometry.size.height * 1.02
-                    )
-
-                // Bottom content
-                VStack {
-                    Spacer()
-                    bottomContent()
-                        .padding(.horizontal, 28)
-                        .padding(.bottom, max(geometry.safeAreaInsets.bottom, 24))
-                }
-
-                // Top content pinned to top-leading safe area
-                topContent()
-                    .padding(.top, max(geometry.safeAreaInsets.top, 12))
-                    .padding(.leading, 16)
-            }
-        }
-    }
-}
-
 // MARK: - CLOUD ANIMATION
 struct AnimatedCloud: View {
     enum Direction { case leftToRight, rightToLeft }
@@ -222,25 +120,23 @@ struct MinimalAirplane: View {
     }
 }
 
-// NOTE: ContinueButton was removed here to avoid duplicate with OnboardingScreens.swift
-// If you prefer to keep it in this file instead, remove the one from OnboardingScreens.swift.
-
 // MARK: - FIRST SCREEN (LOGO CENTERED)
 struct LoginView: View {
     @State private var userName = ""
     var onContinue: () -> Void = {}
     var onBack: () -> Void = {}
     var body: some View {
-        BackgroundDesign(
+        // CHANGED from BackgroundDesign to OnboardingBackground to perfectly match the other screens!
+        OnboardingBackground(
             bottomContent: {
-                VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
                     Text("What's your name?")
                         .font(.headline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.black)
                     
                     TextField("Name", text: $userName)
                         .padding()
-                        .foregroundColor(.gray)
+                        .foregroundColor(.black) // Input text is now black to match!
                         .background(Color(UIColor.systemGray6))
                         .cornerRadius(15)
                         .overlay(
@@ -254,13 +150,18 @@ struct LoginView: View {
                     }
                 }
             },
-           
-     centerContent: {
-                Image("logo1024")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 220)
-                    .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 6)
+            
+            centerContent: {
+                // To prevent the logo from overlapping with the raised inputs, we shift it up slightly
+                VStack {
+                    Image("logo1024")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 160)
+                        .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 6)
+                    Spacer()
+                }
+                .padding(.top, 140) // Pushes logo into the upper sky
             },
             topContent: {
                 BackButton(action: onBack)
